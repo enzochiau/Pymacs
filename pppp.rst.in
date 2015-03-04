@@ -54,7 +54,7 @@ main Pymacs site:
 
 or more directly from GitHub:
 
-  + https://github.com/pinard/Pymacs
+  + http://github.com/pinard/Pymacs
 
 Copy that file somewhere on your search path, and make it executable.
 That's all to it.
@@ -159,7 +159,7 @@ value of the Python expression :var:`expr`.  Beware of Python characters
 which also have a meaning for the shell, proper quoting may be needed.
 Here is, for example, how to define a string while calling :code:`pppp`::
 
-  pppp -D "version='@VERSION@'" ...
+  pppp -D "version='0.24-beta2'" ...
 
 While evaluating :var:`expr`, there is no restriction to the context,
 and builtins are indeed available.  For exemple, to add the builtin

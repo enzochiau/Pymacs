@@ -3,14 +3,15 @@
 # François Pinard <pinard@iro.umontreal.ca>, 2001.
 
 EMACS = emacs
-PYTHON = python
+PYTHON = python3
 RST2LATEX = rst2latex
 
 PYSETUP = $(PYTHON) setup.py
 PPPP = $(PYTHON) pppp -C ppppconfig.py
 
-all pregithub: prepare
-	$(PYSETUP) --quiet build
+all:
+	$(PPPP) *.in contrib tests
+	$(PYSETUP) build
 
 check: clean-debug
 	$(PPPP) pymacs.el.in Pymacs.py.in tests
@@ -19,11 +20,9 @@ check: clean-debug
 	  PYMACS_OPTIONS="-d debug-protocol -s debug-signals" \
 	  $(PYTHON) pytest -f t $(TEST)
 
-install: prepare
+install:
+	$(PPPP) *.in Pymacs.py.in contrib tests
 	$(PYSETUP) install
-
-prepare:
-	$(PPPP) Pymacs.py.in pppp.rst.in pymacs.el.in pymacs.rst.in contrib tests
 
 clean: clean-debug
 	rm -rf build* contrib/rebox/build
@@ -55,30 +54,19 @@ pymacs.pdf: pymacs.rst.in
 	mv -f tmp-pdf/pymacs.pdf $@
 	rm -rf tmp-pdf
 
-ifneq "$(wildcard ~/etc/mes-sites/site.mk)" ""
+# The following goals for the maintainer of the Pymacs Web site.
 
-site: site-all
+ARCHIVES = web/src/archives
+VERSION = `grep '^version' setup.py | sed -e "s/'$$//" -e "s/.*'//"`
 
-package_name = Pymacs
-margin_color = "\#d1b7ff"
-caption_color = "\#f1e4eb"
-
-GOALS = README.html contrib index.html pppp.pdf pymacs.pdf
-
-include ~/etc/mes-sites/site.mk
-
-$(htmldir)/README.html $(htmldir)/index.html:
-	@_2 "$$(basename $@ .html) \c"
-	@rm -f $@
-	@ln -s ~/html/notes/Pymacs.html $@
-
-$(htmldir)/contrib: contrib
-	$(symlink)
-
-$(htmldir)/pppp.pdf: pppp.pdf
-	$(symlink)
-
-$(htmldir)/pymacs.pdf: pymacs.pdf
-	$(symlink)
-
-endif
+publish: pppp.pdf pymacs.pdf pymacs.rst
+	find -name '*~' | xargs rm -fv
+	version=$(VERSION) && \
+	  git archive --format=tar --prefix=Pymacs-$$version/ HEAD . \
+	    | gzip > $(ARCHIVES)/Pymacs-$$version.tar.gz
+	rm -f $(ARCHIVES)/Pymacs.tar.gz
+	version=$(VERSION) && \
+	  ln -s Pymacs-$$version.tar.gz $(ARCHIVES)/Pymacs.tar.gz
+	make-web -C web
+	synchro push alcyon -d entretien/pymacs
+	ssh alcyon 'make-web -C entretien/pymacs/web'

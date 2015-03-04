@@ -34,11 +34,8 @@ See the Pymacs documentation (check `README') for more information.
 package = 'Pymacs'
 version = '@VERSION@'
 
-import os
-import sys
-
 if PYTHON3:
-    import collections
+    import collections, os, sys
 
     def callable(value):
         return isinstance(value, collections.Callable)
@@ -47,11 +44,11 @@ if PYTHON3:
     from imp import reload
 else:
     __metaclass__ = type
-
+    import os, sys
 
 def fixup_icanon():
-    # Otherwise sys.stdin.read hangs for large inputs in emacs 24.
-    # See comment in emacs source code sysdep.c.
+    # otherwise sys.stdin.read hangs for large inputs in emacs 24
+    # see comment in emacs source code sysdep.c
     import termios
     a = termios.tcgetattr(1)
     a[3] &= ~termios.ICANON
@@ -64,7 +61,6 @@ except ImportError:
     signal = None
 
 ## Python services for Emacs applications.
-
 
 class Main:
     debug_file = None
@@ -109,12 +105,12 @@ Arguments are added to the search path for Python modules.
             if IO_ERRORS_WITH_SIGNALS:
                 # See the comment for IO_ERRORS_WITH_SIGNALS in ppppconfig.py.
                 self.original_handler = signal.signal(
-                    signal.SIGINT, self.interrupt_handler)
+                        signal.SIGINT, self.interrupt_handler)
             else:
                 for counter in range(1, signal.NSIG):
                     if counter == signal.SIGINT:
                         self.original_handler = signal.signal(
-                            counter, self.interrupt_handler)
+                                counter, self.interrupt_handler)
                     else:
                         try:
                             signal.signal(counter, self.generic_handler)
@@ -153,15 +149,9 @@ if OLD_EXCEPTIONS:
     ProtocolError = 'ProtocolError'
     ZombieError = 'ZombieError'
 else:
-    class error(Exception):
-        pass
-
-    class ProtocolError(error):
-        pass
-
-    class ZombieError(error):
-        pass
-
+    class error(Exception): pass
+    class ProtocolError(error): pass
+    class ZombieError(error): pass
 
 class Protocol:
 
@@ -232,8 +222,8 @@ class Protocol:
                     import traceback
                     action = 'raise'
                     if lisp.debug_on_error.value() is None:
-                        value = traceback.format_exception_only(
-                            sys.exc_info[0], sys.exc_info[1])
+                        value = traceback.format_exception_only(sys.exc_type,
+                            sys.exc_value)
                         value = ''.join(value).rstrip()
                     else:
                         value = traceback.format_exc()
@@ -302,8 +292,8 @@ class Protocol:
                     import traceback
                     action = 'raise'
                     if lisp.debug_on_error.value() is None:
-                        value = traceback.format_exception_only(
-                            sys.exc_type, sys.exc_value)
+                        value = traceback.format_exception_only(sys.exc_type,
+                            sys.exc_value)
                         value = ''.join(value).rstrip()
                     else:
                         value = traceback.format_exc()
@@ -402,8 +392,7 @@ class Protocol:
             sys.stdout.write(prefix + text)
             sys.stdout.flush()
 
-
-def pymacs_load_helper(file_without_extension, prefix, noerror=None):
+def pymacs_load_helper(file_without_extension, prefix):
     # This function imports a Python module, then returns a Lisp expression
     # which, when later evaluated, will install trampoline definitions
     # in Emacs for accessing the Python module facilities.  Module, given
@@ -435,10 +424,7 @@ def pymacs_load_helper(file_without_extension, prefix, noerror=None):
             for component in module_components[1:]:
                 module = getattr(module, component)
     except ImportError:
-        if noerror:
-            return None
-        else:
-            raise
+        return None
     load_hook = module.__dict__.get('pymacs_load_hook')
     if load_hook:
         load_hook()
@@ -464,7 +450,6 @@ def pymacs_load_helper(file_without_extension, prefix, noerror=None):
                 module]
     return [lisp.quote, module]
 
-
 def doc_string(function):
     import inspect
     return inspect.getdoc(function)
@@ -480,7 +465,6 @@ def doc_string(function):
 python = []
 freed_list = []
 
-
 def allocate_python(value):
     assert not isinstance(value, str), (type(value), repr(value))
     # Allocate some handle to hold VALUE, return its index.
@@ -493,13 +477,11 @@ def allocate_python(value):
         python.append(value)
     return index
 
-
 def free_python(indices):
     # Return many handles to the pool.
     for index in indices:
         python[index] = None
         freed_list.append(index)
-
 
 def zombie_python(indices):
     # Ensure that some handles are _not_ in the pool.
@@ -511,7 +493,6 @@ def zombie_python(indices):
         freed_list.remove(index)
     # Merely to make `*Pymacs*' a bit more readable.
     freed_list.sort()
-
 
 def zombie(*arguments):
     # This catch-all function is set as the value for any function which
@@ -526,7 +507,6 @@ def zombie(*arguments):
     lisp.message(diagnostic)
 
 ## Emacs services for Python applications.
-
 
 class Let:
 
@@ -626,7 +606,6 @@ class Let:
         assert method == Let.pop_window_excursion, (method, data)
         lisp.set_window_configuration(data)
 
-
 class Symbol:
 
     def __init__(self, text):
@@ -665,7 +644,6 @@ class Symbol:
         write(')')
         return lisp._eval(''.join(fragments))
 
-
 class Lisp:
 
     def __init__(self, index):
@@ -686,7 +664,6 @@ class Lisp:
     def copy(self):
         return lisp._expand(str(self))
 
-
 class Buffer(Lisp):
     pass
 
@@ -697,7 +674,6 @@ class Buffer(Lisp):
 
     #def point(self):
     #    return lisp.point(self)
-
 
 class List(Lisp):
 
@@ -731,7 +707,6 @@ class List(Lisp):
         write(')')
         lisp._eval(''.join(fragments))
 
-
 class Table(Lisp):
 
     def __getitem__(self, key):
@@ -752,7 +727,6 @@ class Table(Lisp):
         write(' %s)' % self)
         lisp._eval(''.join(fragments))
 
-
 class Vector(Lisp):
 
     def __len__(self):
@@ -768,7 +742,6 @@ class Vector(Lisp):
         print_lisp(value, write, True)
         write(')')
         lisp._eval(''.join(fragments))
-
 
 class Lisp_Interface:
 
@@ -822,9 +795,9 @@ lisp = Lisp_Interface()
 if PYTHON3:
 
     print_lisp_quoted_specials = {
-        ord('"'): '\\"', ord('\\'): '\\\\', ord('\b'): '\\b',
-        ord('\f'): '\\f',
-        ord('\n'): '\\n', ord('\r'): '\\r', ord('\t'): '\\t'}
+            ord('"'): '\\"', ord('\\'): '\\\\', ord('\b'): '\\b',
+            ord('\f'): '\\f',
+            ord('\n'): '\\n', ord('\r'): '\\r', ord('\t'): '\\t'}
 
     def print_lisp(value, write, quoted):
         if value is None:
@@ -897,8 +870,8 @@ if PYTHON3:
 else:
 
     print_lisp_quoted_specials = {
-        '"': '\\"', '\\': '\\\\', '\b': '\\b', '\f': '\\f',
-        '\n': '\\n', '\r': '\\r', '\t': '\\t'}
+            '"': '\\"', '\\': '\\\\', '\b': '\\b', '\f': '\\f',
+            '\n': '\\n', '\r': '\\r', '\t': '\\t'}
 
     def print_lisp(value, write, quoted):
         if value is None:
